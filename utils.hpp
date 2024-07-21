@@ -31,10 +31,12 @@
   const std::string foreground_cpu_uclamp_min = "/dev/cpuctl/foreground/cpu.uclamp.min";
   const std::string foreground_cpu_uclamp_max = "/dev/cpuctl/foreground/cpu.uclamp.max";
   const std::string policy0 = "/sys/devices/system/cpu/cpufreq/policy0/schedhorizon/up_delay";
+  const std::string policy3 = "/sys/devices/system/cpu/cpufreq/policy3/schedhorizon/up_delay";
   const std::string policy4 = "/sys/devices/system/cpu/cpufreq/policy4/schedhorizon/up_delay";
   const std::string policy7 = "/sys/devices/system/cpu/cpufreq/policy7/schedhorizon/up_delay";
   const std::string cpu_min_freq = "/sys/kernel/msm_performance/parameters/cpu_min_freq";
   const std::string scaling_min_freq0 = "/sys/devices/system/cpu/cpufreq/policy0/scaling_min_freq";
+  const std::string scaling_min_freq3 = "/sys/devices/system/cpu/cpufreq/policy3/scaling_min_freq";
   const std::string scaling_min_freq4 = "/sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq";
   const std::string scaling_min_freq7 = "/sys/devices/system/cpu/cpufreq/policy7/scaling_min_freq";
   // 下面都是核心绑定
@@ -228,21 +230,26 @@ inline void enableFeas(){
   WriteFile(foreground_cpu_uclamp_min, "10");
   WriteFile(foreground_cpu_uclamp_max, "80");
   WriteFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", "sugov_ext");
+  WriteFile("/sys/devices/system/cpu/cpu3/cpufreq/scaling_governor", "sugov_ext");
   WriteFile("/sys/devices/system/cpu/cpu4/cpufreq/scaling_governor", "sugov_ext");
   WriteFile("/sys/devices/system/cpu/cpu7/cpufreq/scaling_governor", "sugov_ext");
   WriteFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", "walt");
+  WriteFile("/sys/devices/system/cpu/cpu3/cpufreq/scaling_governor", "walt");
   WriteFile("/sys/devices/system/cpu/cpu4/cpufreq/scaling_governor", "walt");
   WriteFile("/sys/devices/system/cpu/cpu7/cpufreq/scaling_governor", "walt");
   WriteFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", "0");
+  WriteFile("/sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq", "0");
   WriteFile("/sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq", "0");
   WriteFile("/sys/devices/system/cpu/cpu7/cpufreq/scaling_min_freq", "0");
   WriteFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", "2147483647");
+  WriteFile("/sys/devices/system/cpu/cpu3/cpufreq/scaling_max_freq", "2147483647");
   WriteFile("/sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq", "2147483647");
   WriteFile("/sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq", "2147483647");
   WriteFile("/sys/kernel/msm_performance/parameters/cpu_min_freq", "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0");
 }
 inline void schedhorizon(){
         WriteFile("/sys/devices/system/cpu/cpufreq/policy0/scaling_governor", "schedhorizon");
+        WriteFile("/sys/devices/system/cpu/cpufreq/policy3/scaling_governor", "schedhorizon"); // 针对非1+3+4核心的CPU 例如:8Gen2
 		WriteFile("/sys/devices/system/cpu/cpufreq/policy4/scaling_governor", "schedhorizon");
 		WriteFile("/sys/devices/system/cpu/cpufreq/policy7/scaling_governor", "schedhorizon");
 }
@@ -281,12 +288,12 @@ inline void balance_mode(){
 	WriteFile(scaling_min_freq_limit, "1400000");
 std::vector<std::string> freqs1To5 = {"1400000", "1700000", "2000000", "2500000"};
     std::vector<int> upDelays1To5 = {50, 50, 50, 100};
-    int minFreqLimit1To5 = 1400000;
+    int minFreqLimit1To5 = 1300000;
     int policyStart1To5 = 1;
     int policyEnd1To5 = 5;
     std::vector<std::string> freqs6To7 = {"1200000", "1800000", "2500000"};
     std::vector<int> upDelays6To7 = {50, 100, 100};
-    int minFreqLimit6To7 = 1200000;
+    int minFreqLimit6To7 = 1300000;
     int policyStart6To7 = 6;
     int policyEnd6To7 = 7;
     writePolicyValues(policyStart1To5, policyEnd1To5, freqs1To5, upDelays1To5, minFreqLimit1To5);
@@ -340,26 +347,23 @@ if (data.contains("Enable_Feas") && data["Enable_Feas"] == true) {
     enableFeas();
      } else {
     Log("更换模式为极速模式");
+    /*Q:为什么要切换walt调速器再恢复schedhorizon调速器呢?
+      A:因为此时频率还是被限制的切换到walt再换回schedhorizon 可以重置频率 频率由系统决定 你在处理完温控和DDR就OK了*/
+    WriteFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", "walt");
+    WriteFile("/sys/devices/system/cpu/cpu3/cpufreq/scaling_governor", "walt");
+    WriteFile("/sys/devices/system/cpu/cpu4/cpufreq/scaling_governor", "walt");
+    WriteFile("/sys/devices/system/cpu/cpu7/cpufreq/scaling_governor", "walt");
     schedhorizon();
 	WriteFile(efficient_freq, "0");
 	WriteFile(up_delay, "0");
-	WriteFile(scaling_min_freq_limit, "1700000");
-std::vector<std::string> freqs1To5 = {"1400000", "1700000", "2000000", "2500000"};
-    std::vector<int> upDelays1To5 = {50, 50, 50, 100};
-    int minFreqLimit1To5 = 2300000;
-    int policyStart1To5 = 1;
-    int policyEnd1To5 = 5;
-    std::vector<std::string> freqs6To7 = {"1200000", "1800000", "2500000"};
-    std::vector<int> upDelays6To7 = {50, 100, 100};
-    int minFreqLimit6To7 = 2300000;
-    int policyStart6To7 = 6;
-    int policyEnd6To7 = 7;
-    writePolicyValues(policyStart1To5, policyEnd1To5, freqs1To5, upDelays1To5, minFreqLimit1To5);
-    writePolicyValues(policyStart6To7, policyEnd6To7, freqs6To7, upDelays6To7, minFreqLimit6To7);
 	WriteFile(cpu_uclamp_min, "20");
 	WriteFile(cpu_uclamp_max, "max");
 	WriteFile(foreground_cpu_uclamp_min, "10");
 	WriteFile(foreground_cpu_uclamp_max, "80");
+    WriteFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", "0");
+    WriteFile("/sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq", "0");
+    WriteFile("/sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq", "0");
+    WriteFile("/sys/devices/system/cpu/cpu7/cpufreq/scaling_min_freq", "0");
     WriteFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", "2147483647");
     WriteFile("/sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq", "2147483647");
     WriteFile("/sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq", "2147483647");
