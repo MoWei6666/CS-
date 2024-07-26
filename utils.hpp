@@ -253,6 +253,33 @@ inline void schedhorizon(){
 		WriteFile("/sys/devices/system/cpu/cpufreq/policy4/scaling_governor", "schedhorizon");
 		WriteFile("/sys/devices/system/cpu/cpufreq/policy7/scaling_governor", "schedhorizon");
 }
+inline void super_powersave_mode(){
+    Log("更换模式为超级省电模式");
+    schedhorizon();
+	WriteFile(efficient_freq, "1700000");
+	WriteFile(up_delay, "50");
+	WriteFile(scaling_min_freq_limit, "1000000");
+std::vector<std::string> freqs1To5 = {"1400000", "1700000", "2000000", "2500000"};
+    std::vector<int> upDelays1To5 = {100, 100, 300, 500};
+    int minFreqLimit1To5 = 400000;
+    int policyStart1To5 = 1;
+    int policyEnd1To5 = 5;
+    std::vector<std::string> freqs6To7 = {"1200000", "1800000", "2500000"};
+    std::vector<int> upDelays6To7 = {100, 500, 500};
+    int minFreqLimit6To7 = 500000;
+    int policyStart6To7 = 6;
+    int policyEnd6To7 = 7;
+    writePolicyValues(policyStart1To5, policyEnd1To5, freqs1To5, upDelays1To5, minFreqLimit1To5);
+    writePolicyValues(policyStart6To7, policyEnd6To7, freqs6To7, upDelays6To7, minFreqLimit6To7);
+	WriteFile(cpu_uclamp_min, "0");
+	WriteFile(cpu_uclamp_max, "80");
+	WriteFile(foreground_cpu_uclamp_min, "0");
+	WriteFile(foreground_cpu_uclamp_max, "65");
+    std::vector<std::string> paths = GpuDDR();
+    for (const auto& path : paths) {
+        WriteFile(path, "45000"); // 45℃ 
+    }
+}
 inline void powersave_mode(){
     Log("更换模式为省电模式");
     schedhorizon();
@@ -260,13 +287,13 @@ inline void powersave_mode(){
 	WriteFile(up_delay, "50");
 	WriteFile(scaling_min_freq_limit, "1000000");
 std::vector<std::string> freqs1To5 = {"1400000", "1700000", "2000000", "2500000"};
-    std::vector<int> upDelays1To5 = {100, 100, 300, 500};
-    int minFreqLimit1To5 = 800000;
+    std::vector<int> upDelays1To5 = {100, 150, 300, 500};
+    int minFreqLimit1To5 = 900000;
     int policyStart1To5 = 1;
     int policyEnd1To5 = 5;
     std::vector<std::string> freqs6To7 = {"1200000", "1800000", "2500000"};
-    std::vector<int> upDelays6To7 = {100, 500, 500};
-    int minFreqLimit6To7 = 100000;
+    std::vector<int> upDelays6To7 = {200, 500, 500};
+    int minFreqLimit6To7 = 900000;
     int policyStart6To7 = 6;
     int policyEnd6To7 = 7;
     writePolicyValues(policyStart1To5, policyEnd1To5, freqs1To5, upDelays1To5, minFreqLimit1To5);
@@ -288,12 +315,12 @@ inline void balance_mode(){
 	WriteFile(scaling_min_freq_limit, "1400000");
 std::vector<std::string> freqs1To5 = {"1400000", "1700000", "2000000", "2500000"};
     std::vector<int> upDelays1To5 = {50, 50, 50, 100};
-    int minFreqLimit1To5 = 1300000;
+    int minFreqLimit1To5 = 1400000;
     int policyStart1To5 = 1;
     int policyEnd1To5 = 5;
     std::vector<std::string> freqs6To7 = {"1200000", "1800000", "2500000"};
     std::vector<int> upDelays6To7 = {50, 100, 100};
-    int minFreqLimit6To7 = 1300000;
+    int minFreqLimit6To7 = 1200000;
     int policyStart6To7 = 6;
     int policyEnd6To7 = 7;
     writePolicyValues(policyStart1To5, policyEnd1To5, freqs1To5, upDelays1To5, minFreqLimit1To5);
@@ -345,8 +372,9 @@ inline void fast_mode(){
     file >> data;
 if (data.contains("Enable_Feas") && data["Enable_Feas"] == true) {
     enableFeas();
-     } else {
-    Log("更换模式为极速模式");
+     } 
+if (data.contains("Enable_Feas") && data["Enable_Feas"] == false) {
+        Log("更换模式为极速模式");
     /*Q:为什么要切换walt调速器再恢复schedhorizon调速器呢?
       A:因为此时频率还是被限制的切换到walt再换回schedhorizon 可以重置频率 频率由系统决定 你在处理完温控和DDR就OK了*/
     WriteFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", "walt");
@@ -371,7 +399,7 @@ if (data.contains("Enable_Feas") && data["Enable_Feas"] == true) {
     for (const auto& path : paths) {
         WriteFile(path, "150000"); // 150℃ 
     }
-    }
+     }      
 }
 inline void Getconfig(const std::string& config_path) {
     std::ifstream file(config_path);
@@ -382,9 +410,11 @@ inline void Getconfig(const std::string& config_path) {
         } else if (line == "balance") {
             balance_mode();
         } else if (line == "performance") {
-		    performance_mode();
+            performance_mode();
         } else if (line == "fast") {
             fast_mode();
+        }  else if (line == "super_powersave") {
+            super_powersave_mode();
        }
    }
 }
